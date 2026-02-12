@@ -189,16 +189,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "git-template"
+name = "git-vendor"
 version = "0.0.0"
 dependencies = [
  "git-filter-tree",
- "git-vendor",
 ]
-
-[[package]]
-name = "git-vendor"
-version = "0.0.0"
 
 [[package]]
 name = "git2"

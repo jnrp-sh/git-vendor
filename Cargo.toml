@@ -10,11 +10,10 @@ publish = false
 git2 = "0.20.4"
 
 [package]
-name = "git-template"
+name = "git-vendor"
 version = "0.0.0"
 edition.workspace = true
 publish.workspace = true
 
 [dependencies]
 git-filter-tree = { path = "crates/git-filter-tree" }
-git-vendor = { path = "crates/git-vendor" }
