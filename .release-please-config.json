@@ -17,16 +17,14 @@
     ".": {
       "pull-request-title-pattern": "chore(release): v${version}",
       "include-component-in-tag": false,
-      "release-as": "0.0.1"
+      "release-as": "0.0.1",
+      "exclude-paths": ["xtask"]
     },
     "plumbing/git-set-attr": {
       "release-as": "0.0.1"
     },
     "plumbing/git-filter-tree": {
       "release-as": "0.0.1"
-    },
-    "xtask": {
-      "component": "git-vendor"
     }
   },
   "plugins": [{ "type": "sentence-case" }, { "type": "cargo-workspace" }],
