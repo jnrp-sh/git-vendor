@@ -3,6 +3,7 @@ name: Lint
 on:
   pull_request:
     types:
+      - opened
       - review_requested
       - ready_for_review
       - reopened
@@ -106,3 +107,14 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           arguments: check all -c .deny.toml
+
+  lint:
+    name: Lint
+    if: always()
+    needs: [pre-commit, validate-pr-title, cargo-deny]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          result="${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 'failure' || 'success' }}"
+          echo "result: $result"
+          [[ "$result" == "success" ]] || exit 1
