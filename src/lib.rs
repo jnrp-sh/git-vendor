@@ -63,9 +63,6 @@ pub trait Vendor {
 
     /// Merge the latest content from all relevant vendor sources.
     fn vendor_merge(&self, maybe_pattern: Option<&str>) -> Result<(), Error>;
-
-    /// Fetch and then merge the latest content from all relevant vendor sources.
-    fn vendor_pull(&self, maybe_pattern: Option<&str>) -> Result<(), Error>;
 }
 
 impl Vendor for Repository {
@@ -164,17 +161,12 @@ impl Vendor for Repository {
                 dep.name, dep.url, branch_display
             );
 
-            let remote_name = format!("vendor-{}", dep.name.replace('/', "-"));
-            let _ = self.remote_delete(&remote_name);
-
-            let mut remote = self.remote(&remote_name, &dep.url)?;
+            let mut remote = self.remote_anonymous(&dep.url)?;
             let refspec = match &dep.branch {
                 Some(branch) => format!("+refs/heads/{branch}:{ref_target}"),
                 None => format!("+HEAD:{ref_target}"),
             };
             remote.fetch(&[&refspec], None, None)?;
-
-            let _ = self.remote_delete(&remote_name);
 
             println!("  Fetched to {ref_target}");
         }
@@ -244,11 +236,6 @@ impl Vendor for Repository {
         }
 
         Ok(())
-    }
-
-    fn vendor_pull(&self, maybe_pattern: Option<&str>) -> Result<(), Error> {
-        self.vendor_fetch(maybe_pattern)?;
-        self.vendor_merge(maybe_pattern)
     }
 }
 
