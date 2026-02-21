@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.4](https://github.com/jnpr-sh/git-vendor/compare/v0.0.3...v0.0.4) (2026-02-21)
+
+
+### Features
+
+* Add CLI for `git-vendor` ([#21](https://github.com/jnpr-sh/git-vendor/issues/21)) ([b8dbba6](https://github.com/jnpr-sh/git-vendor/commit/b8dbba665c7cd962894065ce0380b6e9d2808f72))
+
+
+### Bug Fixes
+
+* Properly handle trailing `'/'` characters in glob paths ([#18](https://github.com/jnpr-sh/git-vendor/issues/18)) ([52e57d7](https://github.com/jnpr-sh/git-vendor/commit/52e57d73a142d9893140bf17110a620560d16bc8))
+
 ## [0.0.3](https://github.com/juniperus-sh/git-vendor/compare/v0.0.2...v0.0.3) (2026-02-15)
 
 
