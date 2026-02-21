@@ -3,7 +3,7 @@
 //! Vendor dependencies are tracked via custom attributes in `.gitattributes`:
 //!
 //! ```text
-//! path/to/dep/* vendored vendor-name=owner/repo vendor-url=https://example.com/owner/repo.git vendor-branch=main
+//! path/to/dep/* vendored name=owner/repo url=https://example.com/owner/repo.git branch=main
 //! ```
 //!
 //! Fetched content is stored under `refs/vendor/<name>`.
@@ -108,14 +108,14 @@ impl Vendor for Repository {
 
         let name = resolve_name(url, maybe_name)?;
 
-        let name_attr = format!("vendor-name={name}");
-        let url_attr = format!("vendor-url={url}");
+        let name_attr = format!("name={name}");
+        let url_attr = format!("url={url}");
 
         let mut attrs: Vec<&str> = vec!["vendored", &name_attr, &url_attr];
 
         let branch_attr;
         if let Some(branch) = maybe_branch {
-            branch_attr = format!("vendor-branch={branch}");
+            branch_attr = format!("branch={branch}");
             attrs.push(&branch_attr);
         }
 
@@ -481,7 +481,7 @@ fn find_gitattributes(repo: &Repository) -> Result<PathBuf, Error> {
 /// Parse vendor dependencies from a `.gitattributes` file.
 ///
 /// A line is recognized as a vendor dependency when it carries at least
-/// `vendor-name=` and `vendor-url=`. The `vendor-branch=` attribute is
+/// `name=` and `url=`. The `branch=` attribute is
 /// optional — when absent, the dependency tracks the remote's default branch.
 fn parse_vendor_deps(path: &Path) -> Result<Vec<VendorDep>, Error> {
     if !path.exists() {
@@ -516,11 +516,11 @@ fn parse_vendor_deps(path: &Path) -> Result<Vec<VendorDep>, Error> {
         for attr in parts {
             if attr == "vendored" {
                 is_vendored = true;
-            } else if let Some(v) = attr.strip_prefix("vendor-name=") {
+            } else if let Some(v) = attr.strip_prefix("name=") {
                 name = Some(v.to_string());
-            } else if let Some(v) = attr.strip_prefix("vendor-url=") {
+            } else if let Some(v) = attr.strip_prefix("url=") {
                 url = Some(v.to_string());
-            } else if let Some(v) = attr.strip_prefix("vendor-branch=") {
+            } else if let Some(v) = attr.strip_prefix("branch=") {
                 branch = Some(v.to_string());
             }
         }
@@ -576,8 +576,8 @@ fn remove_vendor_lines(path: &Path, pattern: &str) -> Result<(), Error> {
 }
 
 /// Return `true` if `line` starts with `pattern` and contains at least one
-/// vendor attribute (`vendored`, `vendor-name=`, `vendor-url=`, or
-/// `vendor-branch=`).
+/// vendor attribute (`vendored`, `name=`, `url=`, or
+/// `branch=`).
 fn is_vendor_line_for_pattern(line: &str, pattern: &str) -> bool {
     let trimmed = line.trim();
     if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -596,9 +596,9 @@ fn is_vendor_line_for_pattern(line: &str, pattern: &str) -> bool {
 
     parts.any(|attr| {
         attr == "vendored"
-            || attr.starts_with("vendor-name=")
-            || attr.starts_with("vendor-url=")
-            || attr.starts_with("vendor-branch=")
+            || attr.starts_with("name=")
+            || attr.starts_with("url=")
+            || attr.starts_with("branch=")
     })
 }
 
@@ -770,19 +770,15 @@ mod tests {
         let mut f = fs::File::create(&path).unwrap();
         writeln!(
             f,
-            "*.txt vendored vendor-name=o/r1 vendor-url=https://a.com/o/r1.git vendor-branch=main"
+            "*.txt vendored name=o/r1 url=https://a.com/o/r1.git branch=main"
         )
         .unwrap();
         writeln!(
             f,
-            "*.rs vendored vendor-name=o/r2 vendor-url=https://b.com/o/r2.git vendor-branch=dev"
+            "*.rs vendored name=o/r2 url=https://b.com/o/r2.git branch=dev"
         )
         .unwrap();
-        writeln!(
-            f,
-            "*.toml vendored vendor-name=o/r3 vendor-url=https://c.com/o/r3.git"
-        )
-        .unwrap();
+        writeln!(f, "*.toml vendored name=o/r3 url=https://c.com/o/r3.git").unwrap();
         writeln!(f, "# comment").unwrap();
         writeln!(f, "*.md diff").unwrap();
         writeln!(f).unwrap();
@@ -818,16 +814,12 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join(".gitattributes");
 
-        // Missing vendor-name → skip
-        fs::write(
-            &path,
-            "*.txt vendor-url=https://a.com/o/r.git vendor-branch=main\n",
-        )
-        .unwrap();
+        // Missing name → skip
+        fs::write(&path, "*.txt url=https://a.com/o/r.git branch=main\n").unwrap();
         assert!(parse_vendor_deps(&path).unwrap().is_empty());
 
-        // Missing vendor-url → skip
-        fs::write(&path, "*.txt vendor-name=o/r vendor-branch=main\n").unwrap();
+        // Missing url → skip
+        fs::write(&path, "*.txt name=o/r branch=main\n").unwrap();
         assert!(parse_vendor_deps(&path).unwrap().is_empty());
     }
 
@@ -836,12 +828,8 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join(".gitattributes");
 
-        // Missing vendor-branch → still parsed, branch is None
-        fs::write(
-            &path,
-            "*.txt vendored vendor-name=o/r vendor-url=https://a.com/o/r.git\n",
-        )
-        .unwrap();
+        // Missing branch → still parsed, branch is None
+        fs::write(&path, "*.txt vendored name=o/r url=https://a.com/o/r.git\n").unwrap();
         let deps = parse_vendor_deps(&path).unwrap();
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0].branch, None);
@@ -852,7 +840,7 @@ mod tests {
     #[test]
     fn is_vendor_line_matches() {
         assert!(is_vendor_line_for_pattern(
-            "*.txt vendored vendor-name=o/r vendor-url=https://a.com vendor-branch=main",
+            "*.txt vendored name=o/r url=https://a.com branch=main",
             "*.txt"
         ));
     }
@@ -865,7 +853,7 @@ mod tests {
     #[test]
     fn is_vendor_line_ignores_other_patterns() {
         assert!(!is_vendor_line_for_pattern(
-            "*.rs vendored vendor-name=o/r vendor-url=https://a.com vendor-branch=main",
+            "*.rs vendored name=o/r url=https://a.com branch=main",
             "*.txt"
         ));
     }
@@ -890,9 +878,9 @@ mod tests {
         let path = dir.path().join(".gitattributes");
 
         let original = "\
-*.txt vendored vendor-name=o/r vendor-url=https://a.com vendor-branch=main
+*.txt vendored name=o/r url=https://a.com branch=main
 *.txt diff
-*.rs vendored vendor-name=x/y vendor-url=https://b.com vendor-branch=dev
+*.rs vendored name=x/y url=https://b.com branch=dev
 # comment
 ";
         fs::write(&path, original).unwrap();
@@ -900,9 +888,9 @@ mod tests {
         remove_vendor_lines(&path, "*.txt").unwrap();
 
         let content = fs::read_to_string(&path).unwrap();
-        assert!(!content.contains("vendor-url=https://a.com"));
+        assert!(!content.contains("url=https://a.com"));
         assert!(content.contains("*.txt diff"));
-        assert!(content.contains("*.rs vendored vendor-name=x/y"));
+        assert!(content.contains("*.rs vendored name=x/y"));
         assert!(content.contains("# comment"));
     }
 

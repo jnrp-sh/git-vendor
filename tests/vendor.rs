@@ -59,9 +59,9 @@ fn track_pattern_writes_gitattributes() {
     let content = fs::read_to_string(dir.path().join(".gitattributes")).unwrap();
     assert!(content.contains("*.txt"));
     assert!(content.contains("vendored"));
-    assert!(content.contains("vendor-name=owner/repo"));
-    assert!(content.contains("vendor-url=https://github.com/owner/repo.git"));
-    assert!(content.contains("vendor-branch=main"));
+    assert!(content.contains("name=owner/repo"));
+    assert!(content.contains("url=https://github.com/owner/repo.git"));
+    assert!(content.contains("branch=main"));
 }
 
 #[test]
@@ -75,9 +75,9 @@ fn track_pattern_omits_branch_when_none() {
 
     let content = fs::read_to_string(dir.path().join(".gitattributes")).unwrap();
     assert!(content.contains("vendored"));
-    assert!(content.contains("vendor-name=owner/repo"));
-    assert!(content.contains("vendor-url=https://github.com/owner/repo.git"));
-    assert!(!content.contains("vendor-branch"));
+    assert!(content.contains("name=owner/repo"));
+    assert!(content.contains("url=https://github.com/owner/repo.git"));
+    assert!(!content.contains("branch"));
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn track_pattern_explicit_name_overrides_derived() {
     .unwrap();
 
     let content = fs::read_to_string(dir.path().join(".gitattributes")).unwrap();
-    assert!(content.contains("vendor-name=custom-name"));
+    assert!(content.contains("name=custom-name"));
 }
 
 #[test]
@@ -129,7 +129,7 @@ fn track_pattern_includes_branch_when_specified() {
     .unwrap();
 
     let content = fs::read_to_string(dir.path().join(".gitattributes")).unwrap();
-    assert!(content.contains("vendor-branch=develop"));
+    assert!(content.contains("branch=develop"));
 }
 
 // ---------------------------------------------------------------------------
@@ -152,13 +152,13 @@ fn untrack_pattern_removes_vendor_lines() {
 
     let ga = dir.path().join(".gitattributes");
     let content = fs::read_to_string(&ga).unwrap();
-    assert!(content.contains("vendor-name=owner/repo"));
+    assert!(content.contains("name=owner/repo"));
 
     repo.untrack_pattern("*.txt").unwrap();
 
     let content = fs::read_to_string(&ga).unwrap();
-    assert!(!content.contains("vendor-name=owner/repo"));
-    assert!(!content.contains("vendor-url="));
+    assert!(!content.contains("name=owner/repo"));
+    assert!(!content.contains("url="));
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn status_ok_with_tracked_dep() {
 
     write_gitattributes(
         dir.path(),
-        "*.txt vendored vendor-name=o/r vendor-url=https://example.com/o/r.git vendor-branch=main\n",
+        "*.txt vendored name=o/r url=https://example.com/o/r.git branch=main\n",
     );
 
     assert!(repo.vendor_status(None).is_ok());
@@ -205,7 +205,7 @@ fn status_ok_with_tracked_dep_no_branch() {
 
     write_gitattributes(
         dir.path(),
-        "*.txt vendored vendor-name=o/r vendor-url=https://example.com/o/r.git\n",
+        "*.txt vendored name=o/r url=https://example.com/o/r.git\n",
     );
 
     assert!(repo.vendor_status(None).is_ok());
