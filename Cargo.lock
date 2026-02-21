@@ -231,6 +231,7 @@ dependencies = [
  "git-filter-tree",
  "git-set-attr",
  "git2",
+ "globset",
  "tempfile",
 ]
 

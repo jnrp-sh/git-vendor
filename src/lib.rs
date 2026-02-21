@@ -10,18 +10,25 @@ use git_filter_tree::FilterTree;
 use git_set_attr::SetAttr;
 use git2::{Error, FetchOptions, MergeOptions, Repository};
 use std::{
+    collections::HashMap,
     fs,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
 };
 
+/// A vendored path.
+#[derive(Debug, Clone)]
+pub struct VendorGlob {
+    pub data: HashMap<globset::Glob, VendorDep>,
+}
+
 /// A vendored dependency parsed from `.gitattributes`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VendorDep {
-    pub pattern: String,
     pub url: String,
     pub reference: Option<String>,
     pub prefix: Option<String>,
+    pub source: PathBuf,
 }
 
 pub trait Vendor {
@@ -38,6 +45,7 @@ pub trait Vendor {
         url: &str,
         maybe_reference: Option<&str>,
         maybe_prefix: Option<&str>,
+        maybe_gitattributes: Option<&Path>,
     ) -> Result<(), Error>;
 
     /// Remove the pattern from the appropriate `.gitattributes` file using `git_set_attr`.
@@ -76,6 +84,7 @@ impl Vendor for Repository {
         url: &str,
         maybe_reference: Option<&str>,
         maybe_prefix: Option<&str>,
+        maybe_gitattributes: Option<&Path>,
     ) -> Result<(), Error> {
         require_non_bare(self)?;
 
@@ -93,11 +102,26 @@ impl Vendor for Repository {
             attrs.push(branch);
         }
 
-        self.set_attr(pattern, &attrs, None)
+        let vendored = self.vendor_status(Some(pattern))?;
+
+        if !vendored.is_empty() {
+            // FIXME globs can overlap; we need to handle that
+            return Err(Error::from_str("path is already tracked"));
+        }
+
+        self.set_attr(pattern, &attrs, None);
+
+        Ok(())
     }
 
     fn untrack_pattern(&self, pattern: &str) -> Result<(), Error> {
         require_non_bare(self)?;
+
+        let vendored = self.vendor_status(Some(pattern))?;
+
+        if vendored.is_empty() {
+            return Err(Error::from_str("pattern is not tracked"));
+        }
 
         let path = find_gitattributes(self)?;
         if !path.exists() {
@@ -110,10 +134,13 @@ impl Vendor for Repository {
     fn vendor_status(&self, maybe_pattern: Option<&str>) -> Result<&[VendorDep], Error> {
         require_non_bare(self)?;
 
+        // the closest `.gitattributes` up the directory tree
         let path = find_gitattributes(self)?;
-        let deps = {
-            let unfiltered_deps = parse_vendor_deps(&path)?;
-            filter_deps(&unfiltered_deps, maybe_pattern);
+
+        // all dependencies tracked by
+        let filtered_deps = {
+            let deps = parse_vendor_deps(&path)?;
+            filter_deps(&deps, maybe_pattern);
         };
 
         todo!();
